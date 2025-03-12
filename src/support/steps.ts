@@ -1,4 +1,4 @@
-import { Brand, Data, Effect } from "effect"
+import { Brand, Data, Effect, Either } from "effect"
 import { UnknownException } from "effect/Cause";
 import { gcd } from "./utils";
 
@@ -31,15 +31,28 @@ export const isCoprimeTo = (a: number) => Effect.fn(function*(b: number){
 export class PickPrimes 
 extends Data.TaggedClass("PickPrimes"){
     next(p: Prime, q: Prime){
+        const possible = [];
+        const phi = (p - 1) * (q - 1);
+        const limit = phi;
+        for(let i = 0 ; i < limit ; i++ ){
+            const prime = isCoprimeTo(phi)(i).pipe(
+                Effect.either,
+                Effect.runSync,
+                Either.isRight
+            )
+            if( prime ){
+                possible.push(i);
+            }
+        }
         return Effect.succeed(new PickEncoding({
-            p, q, phi: (p - 1) * (q - 1)
+            p, q, phi, possible
         }))
     }
 }
 
 export class PickEncoding
 extends Data.TaggedClass("PickEncoding")<{
-    p: Prime, q: Prime, phi: number
+    p: Prime, q: Prime, phi: number, possible: number[]
 }> {
     next(e: Coprime){
         return Effect.gen(this, function*(){

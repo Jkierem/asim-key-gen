@@ -1,8 +1,9 @@
 import { Effect, Option, pipe } from "effect";
-import { useImperativeHandle, useRef, useState } from "react";
+import { useImperativeHandle, useMemo, useRef, useState } from "react";
 import { Key } from "../../support/steps";
 import { useIntHandler, useOptional } from "../../support/hooks";
 import { getOrZero } from "../../support/utils";
+import { encryptWith } from "../../support/crypto";
 
 export type CodecControl = {
   setKeys(publicKey: Key, privateKey: Key): void
@@ -24,6 +25,21 @@ export function Codec({ ref }: { ref: React.RefObject<CodecControl>}) {
     const [priv, setPriv, handlePrivateChange] = useIntHandler()
     const [pub, setPub, handlePublicChange] = useIntHandler()
     const [result, setResult] = useOptional<string>();
+    const [invert, setInvert] = useState<boolean>();
+
+    const pubKey: Option.Option<Key> = useMemo(() => {
+      return Option.all({
+        value: pub,
+        mod: pubMod
+      })
+    }, [pubMod, pub]);
+
+    const privKey: Option.Option<Key> = useMemo(() => {
+      return Option.all({
+        value: priv,
+        mod: privMod
+      })
+    },[privMod, priv])
   
     useImperativeHandle(ref, () => {
       return {
@@ -43,13 +59,12 @@ export function Codec({ ref }: { ref: React.RefObject<CodecControl>}) {
   
     const handleEncrypt = () => {
       const encryptEffect = Effect.gen(function*(){
-        const e = BigInt(yield* priv)
-        const mod = BigInt(yield* privMod)
-        return message
+        const data = message
           .split("")
-          .map(s => BigInt(s.charCodeAt(0)))
-          .map(c => (c ** e) % mod)
-          .join(' ')
+          .map(c => c.charCodeAt(0))
+        const key = yield* (invert ? pubKey : privKey);
+        const signed = yield* encryptWith(key, data);
+        return signed.join(' ')
       })
   
       encryptEffect.pipe(
@@ -60,14 +75,14 @@ export function Codec({ ref }: { ref: React.RefObject<CodecControl>}) {
   
     const handleDecrypt = () => {
       const decryptEffect = Effect.gen(function*(){
-        const d = BigInt(yield* pub)
-        const mod = BigInt(yield* pubMod)
-        return message
+        const data = message
           .split(" ")
-          .map(n => BigInt(Number.parseInt(n, 10)))
-          .map(i => (i ** d) % mod)
+          .map(n => Number.parseInt(n, 10))
+        const key = yield* (invert ? privKey : pubKey);
+        const signed = yield* encryptWith(key, data);
+        return signed
           .map(c => String.fromCharCode(Number(c)))
-          .join('')
+          .join("")
       })
   
       decryptEffect.pipe(
@@ -91,7 +106,16 @@ export function Codec({ ref }: { ref: React.RefObject<CodecControl>}) {
         <div>
           <label htmlFor='message'>Mensaje: </label>
         </div>
-        <textarea id="message" className="input-area" value={message} onChange={e => setMessage(e.target.value)}/>
+        <textarea 
+          id="message" 
+          className="input-area" 
+          value={message} 
+          onChange={e => setMessage(e.target.value)}
+        />
+      </div>
+      <div>
+        <label>Invertir cifrado</label>
+        <input type="checkbox" checked={invert} onChange={() => setInvert(a => !a)}/>
       </div>
       <div>
         <button onClick={handleEncrypt}>Cifrar</button>

@@ -117,7 +117,7 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
               <button onClick={handleSubmitPrimeCandidates}>Next</button>
             </>
           }),
-          Match.tag("PickEncoding", () => {
+          Match.tag("PickEncoding", ({ possible }) => {
             return <>
               <ErrorMessage error={error}/>
               <div>
@@ -130,6 +130,13 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
                 />
               </div>
               <button onClick={handleSubmitEncryption}>Next</button>
+              <div
+                  style={{
+                    wordBreak: "break-all"
+                  }}
+                >Valores posibles: {possible.map(p => {
+                  return <button onClick={() => setEValue(p)}>{p}</button>
+                })}</div>
             </>
             
           }),
