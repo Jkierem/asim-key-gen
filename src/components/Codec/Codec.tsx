@@ -4,6 +4,7 @@ import { Key } from "../../support/steps";
 import { useIntHandler, useOptional } from "../../support/hooks";
 import { getOrZero } from "../../support/utils";
 import { encryptWith } from "../../support/crypto";
+import { useI18nFn } from "../../support/i18n";
 
 export type CodecControl = {
   setKeys(publicKey: Key, privateKey: Key): void
@@ -26,6 +27,7 @@ export function Codec({ ref }: { ref: React.RefObject<CodecControl>}) {
     const [pub, setPub, handlePublicChange] = useIntHandler()
     const [result, setResult] = useOptional<string>();
     const [invert, setInvert] = useState<boolean>();
+    const t = useI18nFn();
 
     const pubKey: Option.Option<Key> = useMemo(() => {
       return Option.all({
@@ -93,33 +95,33 @@ export function Codec({ ref }: { ref: React.RefObject<CodecControl>}) {
   
     return <main className='codec'>
       <div>
-        <div>Llave Privada: (
+        <div>{t("codec.labels.privateKey")}(
           {`n = `}<input className='small-input' value={getOrZero(privMod)} onChange={handleChangePrivMod}/>{` `},{` `}
           {`e = `}<input className='small-input' value={getOrZero(priv)} onChange={handlePrivateChange}/>
         ) </div>
-        <div>Llave Publica: (
+        <div>{t("codec.labels.publicKey")}(
           {`n = `}<input className='small-input' value={getOrZero(pubMod)} onChange={handleChangePubMod}/>{` `},{` `}
           {`d = `}<input className='small-input' value={getOrZero(pub)} onChange={handlePublicChange}/>
         )</div>
       </div>
       <div>
         <div>
-          <label htmlFor='message'>Mensaje: </label>
+          <label htmlFor='message'>{t("codec.labels.message")}</label>
         </div>
         <textarea 
           id="message" 
           className="input-area" 
-          value={message} 
+          value={message}
           onChange={e => setMessage(e.target.value)}
         />
       </div>
       <div>
-        <label>Invertir cifrado</label>
+        <label>{t("codec.labels.invert")}</label>
         <input type="checkbox" checked={invert} onChange={() => setInvert(a => !a)}/>
       </div>
       <div>
-        <button onClick={handleEncrypt}>Cifrar</button>
-        <button onClick={handleDecrypt}>Decifrar</button>
+        <button onClick={handleEncrypt}>{t("codec.labels.encrypt")}</button>
+        <button onClick={handleDecrypt}>{t("codec.labels.decrypt")}</button>
       </div>
       <div>
         {
@@ -127,7 +129,7 @@ export function Codec({ ref }: { ref: React.RefObject<CodecControl>}) {
             result,
             Option.map((result) => <>
               <div className="result-box">{result}</div>
-              <button onClick={() => setMessage(result)}>Usar Resultado</button>
+              <button onClick={() => setMessage(result)}>{t("codec.labels.use")}</button>
             </>
             ),
             Option.getOrElse(() => <></>)

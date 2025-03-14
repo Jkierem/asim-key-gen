@@ -4,6 +4,7 @@ import { ErrorMessage } from "../ErrorMessage/ErrorMessage";
 import { isCoprimeTo, isPrime, Key, Steps, WrongStep } from "../../support/steps";
 import { useIntHandler, useOptional } from "../../support/hooks";
 import { useState } from "react";
+import { useI18nFn } from "../../support/i18n";
 
 export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) => void }) {
     const [step, setStep] = useState<Steps>(Steps.Init);
@@ -12,6 +13,7 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
     const [eValue, setEValue, onEChange] = useIntHandler();
     const [error, setError] = useOptional<string>();
     const resetError = () => setError()
+    const t = useI18nFn();
   
     const handleSubmitPrimeCandidates = () => {
       const submitEffect = Effect.gen(function*(){
@@ -31,15 +33,8 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
       submitEffect.pipe(
         Effect.tapError(e => {
           return Effect.sync(() => {
-            pipe(
-              Match.value(e),
-              Match.tagsExhaustive({
-                NoSuchElementException: () => "P y Q deben ser enteros positivos diferentes de 0.",
-                NotPrime: () => "P y Q deben ser primos",
-                WrongStep: () => "Error inesperado. Refresque la pagina."
-              }),
-              setError
-            )
+            const key = `pickPrime.errors.${e._tag}` as const
+            setError(t(key));
           })
         }),
         Effect.andThen(setStep),
@@ -66,10 +61,11 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
             pipe(
               Match.value(e),
               Match.tagsExhaustive({
-                NoSuchElementException: () => "Valor de cifrado debe ser un entero diferente de cero",
-                NotCoprime: (e) => `Valor de cifrado debe ser coprimo a ${e.to}`,
-                OutsideBounds: (e) => `Valor de cifrado deber ser un entero entre ${e.bounds.join(" y ")}`,
-                WrongStep: () => "Error inesperado. Refresque la pagina."
+                NoSuchElementException: () => t("pickEncrypt.errors.NoSuchElementException"),
+                NotCoprime: (e) => t("pickEncrypt.errors.NotCoprime", e),
+                WrongStep: () => t("pickEncrypt.errors.WrongStep"),
+                OutsideBounds: ({ bounds: [min, max]}) => 
+                  t("pickEncrypt.errors.OutsideBounds", { min, max }),
               }),
               setError
             )
@@ -97,7 +93,7 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
             return <>
               <ErrorMessage error={error}/>
               <div>
-                <label>Valor P:{` `}</label>
+                <label>{t("pickPrime.labels.p")}{` `}</label>
                 <input 
                   className='primary-input' 
                   type='number' 
@@ -106,7 +102,7 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
                 />
               </div>
               <div>
-                <label>Valor Q:{` `}</label>
+                <label>{t("pickPrime.labels.q")}{` `}</label>
                 <input 
                   className='primary-input' 
                   type='number' 
@@ -114,14 +110,16 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
                   onChange={onQChange}
                 />
               </div>
-              <button onClick={handleSubmitPrimeCandidates}>Next</button>
+              <button onClick={handleSubmitPrimeCandidates}>
+                {t("pickPrime.labels.next")}
+              </button>
             </>
           }),
           Match.tag("PickEncoding", ({ possible }) => {
             return <>
               <ErrorMessage error={error}/>
               <div>
-                <label>Valor para Cifrado:{` `}</label>
+                <label>{t("pickEncrypt.labels.e")}{` `}</label>
                 <input 
                   className='primary-input' 
                   type='number' 
@@ -129,13 +127,15 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
                   onChange={onEChange}
                 />
               </div>
-              <button onClick={handleSubmitEncryption}>Next</button>
+              <button onClick={handleSubmitEncryption}>
+                {t("pickEncrypt.labels.next")}
+              </button>
               <div
                   style={{
                     wordBreak: "break-all"
                   }}
-                >Valores posibles: {possible.map(p => {
-                  return <button onClick={() => setEValue(p)}>{p}</button>
+                >{t("pickEncrypt.labels.possible")}{possible.map(p => {
+                  return <button key={p} onClick={() => setEValue(p)}>{p}</button>
                 })}</div>
             </>
             
@@ -143,10 +143,14 @@ export function Keygen({ onUse } : { onUse: (publicKey: Key, privateKey: Key) =>
           Match.tag("End", ({ privateKey, publicKey }) => {
             return <>
               <div>
-                <div>Llave Privada: ({privateKey.mod}, {privateKey.value}) </div>
-                <div>Llave Publica: ({publicKey.mod}, {publicKey.value}) </div>
-                <button onClick={handleRestart}>Limpiar</button>
-                <button onClick={() => onUse(publicKey, privateKey)}>Usar</button>
+                <div>{t("end.labels.privateKey", privateKey)}</div>
+                <div>{t("end.labels.publicKey", publicKey)}</div>
+                <button onClick={handleRestart}>
+                  {t("end.labels.restart")}
+                </button>
+                <button onClick={() => onUse(publicKey, privateKey)}>
+                  {t("end.labels.use")}
+                </button>
               </div>
             </>
           }),
